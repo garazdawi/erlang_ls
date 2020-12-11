@@ -74,11 +74,6 @@ documentation(_M, _POI) ->
 %% Uses code:get_doc/1 if available and docs are available
 %% otherwise uses the source files to gather the documentation
 %%
-%% Currently uses shell_docs:render/4 (OTP-23) which render plain text.
-%%
-%% Future work: shell_docs:render/4 should probably be copied and
-%% modified to render markdown, or make an PR to OTP with an option
-%% in erlang's shell_docs to render markdown instead of ANSI-codes.
 -spec get_docs(atom(), atom(), byte()) -> binary().
 -ifdef(OTP_RELEASE).
 -if(?OTP_RELEASE >= 23).
@@ -88,9 +83,9 @@ get_docs(M, F, A) ->
     {ok, #docs_v1{ format = ?NATIVE_FORMAT
                  , module_doc = MDoc
                  } = DocChunk} when MDoc =/= none ->
-      case shell_docs:render(M, F, A, DocChunk) of
+      case shell_docs:render(M, F, A, DocChunk, #{ type => markdown }) of
           {error, _} ->
-              case shell_docs:render(M, F, DocChunk) of
+              case shell_docs:render(M, F, DocChunk, #{ type => markdown }) of
                   {error, _} ->
                       docs_from_src(M, F, A);
                   FuncDoc ->
