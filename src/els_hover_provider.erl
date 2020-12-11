@@ -83,15 +83,23 @@ documentation(_M, _POI) ->
 -ifdef(OTP_RELEASE).
 -if(?OTP_RELEASE >= 23).
 get_docs(M, F, A) ->
+  Kind = content_kind(),
   try get_doc_chunk(M) of
     {ok, #docs_v1{ format = ?NATIVE_FORMAT
                  , module_doc = MDoc
                  } = DocChunk} when MDoc =/= none ->
       case shell_docs:render(M, F, A, DocChunk) of
-        {error, _R0} ->
-          docs_from_src(M, F, A);
+          {error, _} ->
+              case shell_docs:render(M, F, DocChunk) of
+                  {error, _} ->
+                      docs_from_src(M, F, A);
+                  FuncDoc ->
+                      #{ kind => Kind
+                       , value => els_utils:to_binary(FuncDoc)
+                       }
+              end;
         FuncDoc ->
-          #{ kind => content_kind()
+          #{ kind => Kind
            , value => els_utils:to_binary(FuncDoc)
            }
       end;
