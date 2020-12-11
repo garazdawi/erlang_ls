@@ -62,6 +62,10 @@ documentation(Uri, Line, Character) ->
 -spec documentation(atom(), poi()) -> binary().
 documentation(_M, #{kind := application, id := {M, F, A}}) ->
   get_docs(M, F, A);
+documentation(_M, #{kind := type_application, id := {M, F, A}}) ->
+  get_type_docs(M, F, A);
+documentation(M, #{kind := type_application, id := {F, A}}) ->
+  get_type_docs(M, F, A);
 documentation(M, #{kind := application, id := {F, A}}) ->
   get_docs(M, F, A);
 documentation(M, #{kind := export_entry, id := {F, A}}) ->
@@ -75,6 +79,7 @@ documentation(_M, _POI) ->
 %% otherwise uses the source files to gather the documentation
 %%
 -spec get_docs(atom(), atom(), byte()) -> binary().
+-spec get_type_docs(atom(), atom(), byte()) -> binary().
 -ifdef(OTP_RELEASE).
 -if(?OTP_RELEASE >= 23).
 get_docs(M, F, A) ->
@@ -110,6 +115,39 @@ get_docs(M, F, A) ->
       docs_from_src(M, F, A)
   end.
 
+get_type_docs(M, F, A) ->
+    Kind = content_kind(),
+    try get_doc_chunk(M) of
+        {ok, #docs_v1{ format = ?NATIVE_FORMAT
+                     , module_doc = MDoc
+                     } = DocChunk} when MDoc =/= none ->
+            case shell_docs:render_type(M, F, A, DocChunk, #{ type => markdown }) of
+                {error, _} ->
+                    case shell_docs:render_type(M, F, DocChunk, #{ type => markdown }) of
+                        {error, _} ->
+                            <<>>;
+                        FuncDoc ->
+                            #{ kind => Kind
+                             , value => els_utils:to_binary(FuncDoc)
+                             }
+                    end;
+                FuncDoc ->
+                    #{ kind => Kind
+                     , value => els_utils:to_binary(FuncDoc)
+                     }
+            end;
+        _R1 ->
+            <<>>
+    catch C:E:ST ->
+            %% code:get_doc/1 fails for escriptized modules, so fall back
+            %% reading docs from source. See #751 for details
+            Fmt = "Error fetching docs, falling back to src."
+                " module=~p error=~p:~p st=~p",
+            Args = [M, C, E, ST],
+            lager:warning(Fmt, Args),
+            <<>>
+    end.
+
 %% This function first tries to read the doc chunk from the .beam file
 %% and if that fails it attempts to find the .chunk file.
 -spec get_doc_chunk(M :: module()) -> {ok, term()} | error.
@@ -133,6 +171,8 @@ get_doc_chunk(M) ->
 -else.
 get_docs(M, F, A) ->
   docs_from_src(M, F, A).
+get_type_docs(_M, _F, _A) ->
+  <<>>.
 -endif.
 -endif.
 
