@@ -36,6 +36,7 @@
         , crossref_pseudo_functions/1
         , unused_includes/1
         , unused_macros/1
+        , gradualizer/1
         ]).
 
 %%==============================================================================
@@ -617,6 +618,32 @@ unused_macros(Config) ->
                 , source => <<"UnusedMacros">>
                 }
              ],
+  F = fun(#{message := M1}, #{message := M2}) -> M1 =< M2 end,
+  ?assertEqual(Expected, lists:sort(F, Diagnostics)),
+  ok.
+
+gradualizer(Config) ->
+  Uri = ?config(diagnostics_gradualizer_uri, Config),
+  els_mock_diagnostics:subscribe(),
+  ok = els_client:did_save(Uri),
+  Diagnostics = els_mock_diagnostics:wait_until_complete(),
+  Diagnostics == []
+    andalso ct:fail("Diagnostics should not be empty - is Gradualizer "
+                    "available in the code path?"),
+  %Expected = [ #{ message => <<"Unused macro: UNUSED_MACRO">>
+  %              , range =>
+  %                  #{ 'end' => #{ character => 20
+  %                               , line => 5
+  %                               }
+  %                   , start => #{ character => 8
+  %                               , line => 5
+  %                               }
+  %                   }
+  %              , severity => 2
+  %              , source => <<"UnusedMacros">>
+  %              }
+  %           ],
+  Expected = [],
   F = fun(#{message := M1}, #{message := M2}) -> M1 =< M2 end,
   ?assertEqual(Expected, lists:sort(F, Diagnostics)),
   ok.

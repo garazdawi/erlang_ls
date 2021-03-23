@@ -177,6 +177,7 @@ sources() ->
   , elvis_diagnostics
   , execute_command_suggest_spec
   , format_input
+  , diagnostics_gradualizer
   , hover_docs
   , hover_docs_caller
   , my_gen_server
