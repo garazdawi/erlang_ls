@@ -3,15 +3,17 @@ FROM erlang:23
 RUN apt-get update -y && apt-get install vim make curl git nodejs -y 
 
 RUN git clone https://github.com/garazdawi/erlang_ls/
-RUN git clone https://github.com/josefs/Gradualizer
+RUN git clone https://github.com/garazdawi/Gradualizer
 
-RUN cd Gradualizer && make
+RUN cd Gradualizer && git checkout erlang_ls && make
 RUN cd erlang_ls && git checkout gradualizer && make
+
 ENV ERL_FLAGS="-pa /Gradualizer/ebin"
 
 RUN curl -fLo ~/.vim/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
 
-RUN echo   "call plug#begin('~/.vim/plugged')\n\
+RUN echo   "let g:coc_disable_startup_warning = 1\n\
+call plug#begin('~/.vim/plugged')\n\
 Plug 'neoclide/coc.nvim', {'branch': 'release'}\n\
 call plug#end()" >> /root/.vimrc
 
@@ -27,3 +29,4 @@ RUN echo \
   }\n\
 }' >> /root/.vim/coc-settings.json
  
+CMD vim
